@@ -56,4 +56,7 @@ const chamadoSchema = new mongoose.Schema({
 
 }, { timestamps: true })
 
+chamadoSchema.index({ empresaColetora: 1 })
+chamadoSchema.index({ empresaDestino: 1 })
+
 export default mongoose.model("Chamado", chamadoSchema)
