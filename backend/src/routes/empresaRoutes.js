@@ -8,4 +8,5 @@ router.get("/", listarEmpresas)
 router.get("/:id", listarEmpresaPorId)
 router.put("/:id", atualizarEmpresaPorId)
 router.delete("/:id", deletarEmpresaPorId)
+
 export default router
