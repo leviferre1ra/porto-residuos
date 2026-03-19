@@ -7,16 +7,8 @@ import gerarNumeroCRRE from "../utils/gerarNumeroCRRE.js"
 //Create
 export const criarChamado = asyncHandler(async (req, res) => {
 
-  const { empresaColetora, empresaDestino } = req.body
+  const { empresaDestino } = req.body
 
-  // verificar se empresa coletora existe
-  const coletora = await Empresa.findById(empresaColetora)
-
-  if (!coletora) {
-    return res.status(404).json({
-      erro: "Empresa coletora não encontrada"
-    })
-  }
 
   // verificar se empresa destino existe
   const destino = await Empresa.findById(empresaDestino)
@@ -31,6 +23,7 @@ export const criarChamado = asyncHandler(async (req, res) => {
 
   const chamado = await Chamado.create({
     ...req.body,
+    empresaColetora: req.usuario.empresaId,
     numeroCRRE
   })
 
@@ -63,7 +56,7 @@ export const listarChamados = asyncHandler(async (req, res) => {
       hasPrev: page > 1
     }
   });
-})
+});
 
 //Read By Id
 export const listarChamadoPorId = asyncHandler(async (req, res) => {
