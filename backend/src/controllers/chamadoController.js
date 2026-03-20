@@ -31,21 +31,64 @@ export const criarChamado = asyncHandler(async (req, res) => {
 
 })
 
-//Read
+
+// Read
 export const listarChamados = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+  // Garante que a rota está protegida e temos um usuário
+  if (!req.usuario) {
+    return res.status(401).json({ erro: "Não autenticado" });
+  }
+
+  const tipoUsuario = String(req.usuario.tipo || "").toLowerCase();
+
+  // Monta o filtro base
+  const filtro = {};
+
+  // Regra de visibilidade: coletora vê apenas os próprios chamados
+  if (tipoUsuario === "coletora") {
+    if (!req.usuario.empresaId) {
+      return res.status(403).json({ erro: "Usuário coletora sem empresa vinculada" });
+    }
+    filtro.empresaColetora = req.usuario.empresaId;
+  }
+  // Se for admin → sem filtro adicional (vê tudo)
+
+  // Paginação
+  const page = Number.parseInt(req.query.page, 10) || 1;
+  const limit = Number.parseInt(req.query.limit, 10) || 10;
   const skip = (page - 1) * limit;
 
-  const total = await Chamado.countDocuments();
-  const chamados = await Chamado.find()
+  // (Opcional) Filtros adicionais por query — sempre adicionativos
+  // Ex.: /chamados?status=aprovado
+  if (req.query.status) {
+    filtro.status = req.query.status;
+  }
+  // Ex.: /chamados?empresaDestino=<id>
+  if (req.query.empresaDestino) {
+    filtro.empresaDestino = req.query.empresaDestino;
+  }
+  // Ex.: /chamados?de=2025-01-01&ate=2025-01-31
+  if (req.query.de || req.query.ate) {
+    filtro.createdAt = {};
+    if (req.query.de) filtro.createdAt.$gte = new Date(req.query.de);
+    if (req.query.ate) filtro.createdAt.$lte = new Date(req.query.ate);
+  }
+
+  // Conta apenas o universo permitido ao usuário
+  const total = await Chamado.countDocuments(filtro);
+
+  // Busca paginada com o mesmo filtro (mantém consistência com total)
+  const chamados = await Chamado.find(filtro)
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(limit);
+    .limit(limit)
+    .populate("empresaColetora", "razaoSocial cnpj tipo") // seleciona campos mínimos necessários
+    .populate("empresaDestino", "razaoSocial cnpj tipo")
+    .lean(); // performance: objetos simples
 
-  const totalPages = Math.ceil(total / limit);
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
-  res.json({
+  return res.json({
     chamados,
     pagination: {
       total,
@@ -53,8 +96,8 @@ export const listarChamados = asyncHandler(async (req, res) => {
       limit,
       totalPages,
       hasNext: page < totalPages,
-      hasPrev: page > 1
-    }
+      hasPrev: page > 1,
+    },
   });
 });
 

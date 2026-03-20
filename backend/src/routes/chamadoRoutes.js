@@ -8,7 +8,7 @@ const router = express.Router()
 // só coletora pode criar chamado
 router.post("/", authMiddleware, roleMiddleware("coletora"), criarChamado)
 
-router.get("/", listarChamados)
+router.get("/", authMiddleware, listarChamados)
 router.get("/:id", listarChamadoPorId)
 
 export default router
